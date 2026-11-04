@@ -123,8 +123,17 @@ func reubicar(nueva_posicion: Vector2) -> void:
 	set_deferred("visible", true)
 
 func detener_completamente() -> void:
-	if not fue_embolsada:
-		detener_pendiente = true
+	if fue_embolsada:
+		return
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	detener_pendiente = false
+
+func limpiar_estados_pendientes() -> void:
+	detener_pendiente = false
+	posicion_reaparicion = Vector2.INF
 
 func activar_modo_colocacion(limites: Rect2) -> void:
 	if tipo_bola != TipoBola.BLANCA:
@@ -335,16 +344,19 @@ func disparar() -> void:
 	if distancia < UMBRAL_MINIMO_ARRASTRE:
 		return
 		
+	limpiar_estados_pendientes()
 	primer_contacto_registrado = false
 	monitoreando_primer_contacto = true
+	sleeping = false
 	
+	if gestor:
+		gestor.registrar_tiro()
+		
 	var direccion_apunte: Vector2 = vector_arrastre.normalized()
 	var impulso: Vector2 = direccion_apunte * distancia * multiplicador_potencia
 	apply_central_impulse(impulso)
 	
 	tiro_ejecutado.emit()
-	if gestor:
-		gestor.registrar_tiro()
 
 func _obtener_gestor() -> GestorJuego:
 	if not gestor_ref:

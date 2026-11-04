@@ -20,6 +20,8 @@ var estilo_relleno_tiempo_j2: StyleBoxFlat
 
 var slots_j1: Array[Panel] = []
 var slots_j2: Array[Panel] = []
+var iconos_slots_j1: Array[TextureRect] = []
+var iconos_slots_j2: Array[TextureRect] = []
 
 var etiqueta_estado_central: Label
 var panel_notificacion: PanelContainer
@@ -38,12 +40,13 @@ func _conectar_con_gestor() -> void:
 	gestor_juego.turno_cambiado.connect(_al_cambiar_turno)
 	gestor_juego.tiempo_turno_actualizado.connect(_al_actualizar_tiempo)
 	gestor_juego.facciones_asignadas.connect(_al_asignar_facciones)
-	gestor_juego.conteo_bolas_actualizado.connect(_al_actualizar_conteo_bolas)
+	gestor_juego.bolas_embolsadas_actualizadas.connect(_al_actualizar_bolas_embolsadas)
 	gestor_juego.notificacion_juego.connect(_al_recibir_notificacion)
 	gestor_juego.partida_finalizada.connect(_al_finalizar_partida)
 	
 	_actualizar_resaltado_turno(gestor_juego.turno_actual, false)
-	_al_actualizar_conteo_bolas(7, 7)
+	var vacio: Array[Texture2D] = []
+	_al_actualizar_bolas_embolsadas(vacio, vacio, 7, 7)
 
 func _construir_interfaz() -> void:
 	var contenedor_raiz: Control = Control.new()
@@ -52,11 +55,11 @@ func _construir_interfaz() -> void:
 	contenedor_raiz.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(contenedor_raiz)
 	
-	# Barra superior posicionada por encima del borde superior de la mesa (y = 14..128)
+	# Barra superior posicionada por encima del borde superior de la mesa (y = 12..130)
 	var barra_superior: HBoxContainer = HBoxContainer.new()
 	barra_superior.name = "BarraSuperior"
-	barra_superior.position = Vector2(324.0, 14.0)
-	barra_superior.size = Vector2(1296.0, 118.0)
+	barra_superior.position = Vector2(324.0, 12.0)
+	barra_superior.size = Vector2(1296.0, 122.0)
 	barra_superior.alignment = BoxContainer.ALIGNMENT_CENTER
 	barra_superior.add_theme_constant_override("separation", 24)
 	barra_superior.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -71,11 +74,12 @@ func _construir_interfaz() -> void:
 	barra_tiempo_j1 = datos_j1["barra_tiempo"]
 	estilo_relleno_tiempo_j1 = datos_j1["estilo_tiempo"]
 	slots_j1 = datos_j1["slots"]
+	iconos_slots_j1 = datos_j1["iconos"]
 	barra_superior.add_child(panel_j1)
 	
 	# Columna Central (Estado de la Mesa)
 	var columna_central: VBoxContainer = VBoxContainer.new()
-	columna_central.custom_minimum_size = Vector2(340.0, 110.0)
+	columna_central.custom_minimum_size = Vector2(340.0, 114.0)
 	columna_central.alignment = BoxContainer.ALIGNMENT_CENTER
 	columna_central.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	barra_superior.add_child(columna_central)
@@ -97,9 +101,10 @@ func _construir_interfaz() -> void:
 	barra_tiempo_j2 = datos_j2["barra_tiempo"]
 	estilo_relleno_tiempo_j2 = datos_j2["estilo_tiempo"]
 	slots_j2 = datos_j2["slots"]
+	iconos_slots_j2 = datos_j2["iconos"]
 	barra_superior.add_child(panel_j2)
 	
-	# Notificacion Flotante Central (Debajo de la mesa en el margen inferior y = 890 para no tapar el juego)
+	# Notificacion Flotante Central (Debajo de la mesa en el margen inferior y = 885)
 	panel_notificacion = PanelContainer.new()
 	panel_notificacion.name = "PanelNotificacion"
 	panel_notificacion.position = Vector2(460.0, 885.0)
@@ -130,7 +135,7 @@ func _construir_interfaz() -> void:
 
 func _crear_tarjeta_jugador(titulo: String, alinear_derecha: bool) -> Dictionary:
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(440.0, 114.0)
+	panel.custom_minimum_size = Vector2(440.0, 118.0)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	var estilo_panel: StyleBoxFlat = StyleBoxFlat.new()
@@ -140,12 +145,12 @@ func _crear_tarjeta_jugador(titulo: String, alinear_derecha: bool) -> Dictionary
 	estilo_panel.set_corner_radius_all(12)
 	estilo_panel.content_margin_left = 16.0
 	estilo_panel.content_margin_right = 16.0
-	estilo_panel.content_margin_top = 10.0
-	estilo_panel.content_margin_bottom = 10.0
+	estilo_panel.content_margin_top = 8.0
+	estilo_panel.content_margin_bottom = 8.0
 	panel.add_theme_stylebox_override("panel", estilo_panel)
 	
 	var caja_vertical: VBoxContainer = VBoxContainer.new()
-	caja_vertical.add_theme_constant_override("separation", 8)
+	caja_vertical.add_theme_constant_override("separation", 6)
 	caja_vertical.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(caja_vertical)
 	
@@ -177,7 +182,7 @@ func _crear_tarjeta_jugador(titulo: String, alinear_derecha: bool) -> Dictionary
 		fila_cabecera.add_child(etq_nombre)
 		fila_cabecera.add_child(etq_faccion)
 		
-	# Fila media: 7 slots de bolas embocadas
+	# Fila media: 7 slots que muestran la textura exacta de cada bola embocada
 	var fila_slots: HBoxContainer = HBoxContainer.new()
 	fila_slots.alignment = BoxContainer.ALIGNMENT_END if alinear_derecha else BoxContainer.ALIGNMENT_BEGIN
 	fila_slots.add_theme_constant_override("separation", 10)
@@ -185,18 +190,33 @@ func _crear_tarjeta_jugador(titulo: String, alinear_derecha: bool) -> Dictionary
 	caja_vertical.add_child(fila_slots)
 	
 	var arreglo_slots: Array[Panel] = []
+	var arreglo_iconos: Array[TextureRect] = []
 	for i in range(7):
 		var slot: Panel = Panel.new()
-		slot.custom_minimum_size = Vector2(24.0, 24.0)
+		slot.custom_minimum_size = Vector2(32.0, 32.0)
 		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
 		var estilo_slot: StyleBoxFlat = StyleBoxFlat.new()
-		estilo_slot.bg_color = Color(0.22, 0.25, 0.3, 0.9)
-		estilo_slot.border_color = Color(0.45, 0.5, 0.58, 0.9)
+		estilo_slot.bg_color = Color(0.08, 0.1, 0.13, 0.9)
+		estilo_slot.border_color = Color(0.35, 0.4, 0.48, 0.75)
 		estilo_slot.set_border_width_all(2)
-		estilo_slot.set_corner_radius_all(12)
+		estilo_slot.set_corner_radius_all(16)
 		slot.add_theme_stylebox_override("panel", estilo_slot)
+		
+		var icono_bola: TextureRect = TextureRect.new()
+		icono_bola.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icono_bola.offset_left = 1.0
+		icono_bola.offset_top = 1.0
+		icono_bola.offset_right = -1.0
+		icono_bola.offset_bottom = -1.0
+		icono_bola.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icono_bola.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icono_bola.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(icono_bola)
+		
 		fila_slots.add_child(slot)
 		arreglo_slots.append(slot)
+		arreglo_iconos.append(icono_bola)
 		
 	# Fila inferior: Barra de progreso del temporizador de turno (30s)
 	var barra_tiempo: ProgressBar = ProgressBar.new()
@@ -225,7 +245,8 @@ func _crear_tarjeta_jugador(titulo: String, alinear_derecha: bool) -> Dictionary
 		"etiqueta_faccion": etq_faccion,
 		"barra_tiempo": barra_tiempo,
 		"estilo_tiempo": estilo_relleno_barra,
-		"slots": arreglo_slots
+		"slots": arreglo_slots,
+		"iconos": arreglo_iconos
 	}
 
 func _al_cambiar_turno(jugador_actual: GestorJuego.Jugador, tiene_bola_en_mano: bool) -> void:
@@ -279,34 +300,36 @@ func _texto_faccion(tipo_faccion: int) -> String:
 		return "Faccion: RAYADAS (9-15)"
 	return "Sin Faccion"
 
-func _al_actualizar_conteo_bolas(restantes_j1: int, restantes_j2: int) -> void:
-	var embocadas_j1: int = clampi(7 - restantes_j1, 0, 7)
-	var embocadas_j2: int = clampi(7 - restantes_j2, 0, 7)
-	
-	var color_j1: Color = Color(0.95, 0.55, 0.15, 1.0)
-	var color_j2: Color = Color(0.2, 0.65, 0.98, 1.0)
+func _al_actualizar_bolas_embolsadas(texturas_j1: Array[Texture2D], texturas_j2: Array[Texture2D], restantes_j1: int, restantes_j2: int) -> void:
 	if gestor_juego and not gestor_juego.mesa_abierta:
-		color_j1 = Color(0.95, 0.35, 0.2, 1.0) if gestor_juego.faccion_j1 == Bola.TipoBola.LISA else Color(0.95, 0.8, 0.15, 1.0)
-		color_j2 = Color(0.95, 0.35, 0.2, 1.0) if gestor_juego.faccion_j2 == Bola.TipoBola.LISA else Color(0.95, 0.8, 0.15, 1.0)
 		if restantes_j1 == 0:
 			etiqueta_faccion_j1.text = "¡POR LA BOLA 8!"
+		else:
+			etiqueta_faccion_j1.text = _texto_faccion(gestor_juego.faccion_j1)
 		if restantes_j2 == 0:
 			etiqueta_faccion_j2.text = "¡POR LA BOLA 8!"
+		else:
+			etiqueta_faccion_j2.text = _texto_faccion(gestor_juego.faccion_j2)
 			
-	_pintar_slots(slots_j1, embocadas_j1, color_j1)
-	_pintar_slots(slots_j2, embocadas_j2, color_j2)
+	_actualizar_slots_con_texturas(slots_j1, iconos_slots_j1, texturas_j1)
+	_actualizar_slots_con_texturas(slots_j2, iconos_slots_j2, texturas_j2)
 
-func _pintar_slots(arreglo_slots: Array[Panel], cantidad_iluminados: int, color_activo: Color) -> void:
+func _actualizar_slots_con_texturas(arreglo_slots: Array[Panel], arreglo_iconos: Array[TextureRect], texturas: Array[Texture2D]) -> void:
 	for i in range(arreglo_slots.size()):
 		var estilo: StyleBoxFlat = arreglo_slots[i].get_theme_stylebox("panel") as StyleBoxFlat
-		if not estilo:
-			continue
-		if i < cantidad_iluminados:
-			estilo.bg_color = color_activo
-			estilo.border_color = Color.WHITE
+		var icono: TextureRect = arreglo_iconos[i]
+		if i < texturas.size() and texturas[i] != null:
+			icono.texture = texturas[i]
+			icono.visible = true
+			if estilo:
+				estilo.bg_color = Color(0.15, 0.22, 0.18, 0.95)
+				estilo.border_color = Color(0.4, 0.95, 0.55, 0.95)
 		else:
-			estilo.bg_color = Color(0.18, 0.2, 0.25, 0.85)
-			estilo.border_color = Color(0.4, 0.44, 0.52, 0.8)
+			icono.texture = null
+			icono.visible = false
+			if estilo:
+				estilo.bg_color = Color(0.08, 0.1, 0.13, 0.9)
+				estilo.border_color = Color(0.35, 0.4, 0.48, 0.75)
 
 func _al_recibir_notificacion(mensaje: String) -> void:
 	if not etiqueta_notificacion or not panel_notificacion:

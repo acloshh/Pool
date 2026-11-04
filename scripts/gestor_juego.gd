@@ -5,6 +5,7 @@ signal turno_cambiado(jugador_actual: Jugador, tiene_bola_en_mano: bool)
 signal tiempo_turno_actualizado(segundos_restantes: float, tiempo_total: float)
 signal facciones_asignadas(faccion_jugador_1: int, faccion_jugador_2: int)
 signal conteo_bolas_actualizado(restantes_j1: int, restantes_j2: int)
+signal bolas_embolsadas_actualizadas(texturas_j1: Array[Texture2D], texturas_j2: Array[Texture2D], restantes_j1: int, restantes_j2: int)
 signal notificacion_juego(mensaje: String)
 signal partida_finalizada(ganador: Jugador, motivo: String)
 
@@ -14,6 +15,7 @@ enum EstadoJuego { COLOCANDO_BOLA_BLANCA, ESPERANDO_TIRO, BOLAS_EN_MOVIMIENTO, F
 const TIEMPO_MAXIMO_TURNO: float = 30.0
 const UMBRAL_VELOCIDAD_REPOSO: float = 5.0
 const TICKS_CONFIRMACION_REPOSO: int = 12
+const TICKS_GRACIA_ARRANQUE: int = 8
 const LIMITES_MESA_INTERNA: Rect2 = Rect2(354.0, 210.0, 1236.0, 588.0)
 
 var estado: EstadoJuego = EstadoJuego.ESPERANDO_TIRO
@@ -26,6 +28,8 @@ var faccion_j1: int = -1
 var faccion_j2: int = -1
 
 var bolas_caidas_este_turno: Array[Bola.TipoBola] = []
+var texturas_lisas_embolsadas: Array[Texture2D] = []
+var texturas_rayadas_embolsadas: Array[Texture2D] = []
 var primera_bola_contactada_tipo: int = -1
 var bolas_propias_restantes_al_iniciar_tiro: int = 7
 
@@ -37,6 +41,7 @@ var tronera_donde_cayo_negra: Tronera = null
 var tiempo_restante_turno: float = TIEMPO_MAXIMO_TURNO
 var ultimo_aviso_tiempo: int = -1
 var ticks_acumulados_reposo: int = 0
+var ticks_desde_disparo: int = 0
 
 var bola_blanca_ref: Bola
 
@@ -70,6 +75,9 @@ func _physics_process(delta: float) -> void:
 		return
 		
 	if estado == EstadoJuego.BOLAS_EN_MOVIMIENTO:
+		ticks_desde_disparo += 1
+		if ticks_desde_disparo <= TICKS_GRACIA_ARRANQUE:
+			return
 		if _todas_las_bolas_bajo_umbral():
 			ticks_acumulados_reposo += 1
 			if ticks_acumulados_reposo >= TICKS_CONFIRMACION_REPOSO:
@@ -104,10 +112,14 @@ func _procesar_falta_por_tiempo() -> void:
 func registrar_tiro() -> void:
 	if estado == EstadoJuego.ESPERANDO_TIRO:
 		estado = EstadoJuego.BOLAS_EN_MOVIMIENTO
+		ticks_desde_disparo = 0
 		ticks_acumulados_reposo = 0
 		bolas_caidas_este_turno.clear()
 		primera_bola_contactada_tipo = -1
 		tronera_donde_cayo_negra = null
+		for bola in nodo_bolas.get_children():
+			if bola is Bola:
+				(bola as Bola).limpiar_estados_pendientes()
 		_habilitar_seleccion_troneras(false)
 		if tronera_designada:
 			tronera_designada.establecer_seleccionada(true)
@@ -195,15 +207,37 @@ func _on_bola_embolsada(bola: Bola, tronera: Tronera) -> void:
 	bolas_caidas_este_turno.append(bola.tipo_bola)
 	if bola.tipo_bola == Bola.TipoBola.NEGRA:
 		tronera_donde_cayo_negra = tronera
+	elif bola.tipo_bola == Bola.TipoBola.LISA and bola.textura_bola:
+		texturas_lisas_embolsadas.append(bola.textura_bola)
+	elif bola.tipo_bola == Bola.TipoBola.RAYADA and bola.textura_bola:
+		texturas_rayadas_embolsadas.append(bola.textura_bola)
 	_emitir_conteo_bolas()
 
 func _emitir_conteo_bolas() -> void:
 	if mesa_abierta:
-		conteo_bolas_actualizado.emit(7, 7)
+		# Si estan cayendo bolas en este tiro con mesa abierta, mostrar provisoriamente segun el turno actual
+		var faccion_provisoria_activo: int = -1
+		for tipo in bolas_caidas_este_turno:
+			if tipo == Bola.TipoBola.LISA or tipo == Bola.TipoBola.RAYADA:
+				faccion_provisoria_activo = tipo
+				break
+		if faccion_provisoria_activo != -1 and not (Bola.TipoBola.BLANCA in bolas_caidas_este_turno):
+			var fac_j1_prov: int = faccion_provisoria_activo if turno_actual == Jugador.UNO else (Bola.TipoBola.RAYADA if faccion_provisoria_activo == Bola.TipoBola.LISA else Bola.TipoBola.LISA)
+			var tex_j1_prov: Array[Texture2D] = texturas_lisas_embolsadas if fac_j1_prov == Bola.TipoBola.LISA else texturas_rayadas_embolsadas
+			var tex_j2_prov: Array[Texture2D] = texturas_rayadas_embolsadas if fac_j1_prov == Bola.TipoBola.LISA else texturas_lisas_embolsadas
+			conteo_bolas_actualizado.emit(7 - tex_j1_prov.size(), 7 - tex_j2_prov.size())
+			bolas_embolsadas_actualizadas.emit(tex_j1_prov, tex_j2_prov, 7 - tex_j1_prov.size(), 7 - tex_j2_prov.size())
+		else:
+			var vacio: Array[Texture2D] = []
+			conteo_bolas_actualizado.emit(7, 7)
+			bolas_embolsadas_actualizadas.emit(vacio, vacio, 7, 7)
 	else:
 		var rest_j1: int = _contar_bolas_restantes(faccion_j1)
 		var rest_j2: int = _contar_bolas_restantes(faccion_j2)
+		var tex_j1: Array[Texture2D] = texturas_lisas_embolsadas if faccion_j1 == Bola.TipoBola.LISA else texturas_rayadas_embolsadas
+		var tex_j2: Array[Texture2D] = texturas_lisas_embolsadas if faccion_j2 == Bola.TipoBola.LISA else texturas_rayadas_embolsadas
 		conteo_bolas_actualizado.emit(rest_j1, rest_j2)
+		bolas_embolsadas_actualizadas.emit(tex_j1, tex_j2, rest_j1, rest_j2)
 
 func _evaluar_turno() -> void:
 	print("--- Fin del tiro ---")
@@ -229,6 +263,8 @@ func _evaluar_turno() -> void:
 			mantiene_turno = _evaluar_mesa_cerrada()
 			
 	es_tiro_saque = false
+	bolas_caidas_este_turno.clear()
+	_emitir_conteo_bolas()
 	
 	if not mantiene_turno:
 		_cambiar_turno(hay_falta)
