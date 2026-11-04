@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://12do0p3ui0mj"]
+
+[ext_resource type="Script" uid="uid://c3tj8vbh1rar" path="res://scripts/bola_blanca.gd" id="1_omhd6"]
+[ext_resource type="Texture2D" uid="uid://cd57vbm7hu3dx" path="res://assets/Pool/pool_ball_plain_1.png" id="2_omhd6"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_wwa5j"]
+friction = 0.5
+bounce = 0.7
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_yfaq3"]
+radius = 257.31693
+
+[node name="BolaColor" type="RigidBody2D" unique_id=1862261123]
+collision_layer = 2
+collision_mask = 3
+physics_material_override = SubResource("PhysicsMaterial_wwa5j")
+gravity_scale = 0.0
+continuous_cd = 2
+linear_damp = 1.2
+script = ExtResource("1_omhd6")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=880164253]
+scale = Vector2(0.06, 0.06)
+texture = ExtResource("2_omhd6")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1408515985]
+scale = Vector2(0.06, 0.06)
+shape = SubResource("CircleShape2D_yfaq3")

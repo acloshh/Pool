@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://hg6n5f6iyg7g"]
+
+[ext_resource type="Script" uid="uid://btfp0qnxfrvnl" path="res://scripts/tronera.gd" id="1_8i5m2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_8i5m2"]
+radius = 26.0
+
+[node name="tronera" type="Area2D" unique_id=1975871156]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_8i5m2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=212700589]
+shape = SubResource("CircleShape2D_8i5m2")

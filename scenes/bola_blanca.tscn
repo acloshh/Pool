@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://e0pgkh1aqqhn"]
+
+[ext_resource type="Script" uid="uid://c3tj8vbh1rar" path="res://scripts/bola_blanca.gd" id="1_wwa5j"]
+[ext_resource type="Texture2D" uid="uid://c2bu4ojrfgaly" path="res://assets/Pool/cue_ball_plain.png" id="2_js7bc"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_wwa5j"]
+friction = 0.5
+bounce = 0.7
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_yfaq3"]
+radius = 257.31693
+
+[node name="BolaBlanca" type="RigidBody2D" unique_id=1862261123]
+collision_layer = 2
+collision_mask = 3
+physics_material_override = SubResource("PhysicsMaterial_wwa5j")
+gravity_scale = 0.0
+continuous_cd = 2
+linear_damp = 1.2
+script = ExtResource("1_wwa5j")
+es_bola_blanca = true
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=880164253]
+scale = Vector2(0.06, 0.06)
+texture = ExtResource("2_js7bc")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1408515985]
+scale = Vector2(0.06, 0.06)
+shape = SubResource("CircleShape2D_yfaq3")
+
+[node name="LineaApunte" type="Line2D" parent="." unique_id=1398839297]
+visible = false
+width = 2.0
+default_color = Color(1, 1, 1, 0.5176471)
