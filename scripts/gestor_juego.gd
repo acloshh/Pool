@@ -4,6 +4,7 @@ extends Node
 signal turno_cambiado(jugador_actual: Jugador, tiene_bola_en_mano: bool)
 signal tiempo_turno_actualizado(segundos_restantes: float, tiempo_total: float)
 signal facciones_asignadas(faccion_jugador_1: int, faccion_jugador_2: int)
+signal conteo_bolas_actualizado(restantes_j1: int, restantes_j2: int)
 signal notificacion_juego(mensaje: String)
 signal partida_finalizada(ganador: Jugador, motivo: String)
 
@@ -13,7 +14,7 @@ enum EstadoJuego { COLOCANDO_BOLA_BLANCA, ESPERANDO_TIRO, BOLAS_EN_MOVIMIENTO, F
 const TIEMPO_MAXIMO_TURNO: float = 30.0
 const UMBRAL_VELOCIDAD_REPOSO: float = 5.0
 const TICKS_CONFIRMACION_REPOSO: int = 12
-const LIMITES_MESA_INTERNA: Rect2 = Rect2(350.0, 205.0, 1244.0, 598.0)
+const LIMITES_MESA_INTERNA: Rect2 = Rect2(354.0, 210.0, 1236.0, 588.0)
 
 var estado: EstadoJuego = EstadoJuego.ESPERANDO_TIRO
 var posicion_saque: Vector2 = Vector2.ZERO
@@ -194,6 +195,15 @@ func _on_bola_embolsada(bola: Bola, tronera: Tronera) -> void:
 	bolas_caidas_este_turno.append(bola.tipo_bola)
 	if bola.tipo_bola == Bola.TipoBola.NEGRA:
 		tronera_donde_cayo_negra = tronera
+	_emitir_conteo_bolas()
+
+func _emitir_conteo_bolas() -> void:
+	if mesa_abierta:
+		conteo_bolas_actualizado.emit(7, 7)
+	else:
+		var rest_j1: int = _contar_bolas_restantes(faccion_j1)
+		var rest_j2: int = _contar_bolas_restantes(faccion_j2)
+		conteo_bolas_actualizado.emit(rest_j1, rest_j2)
 
 func _evaluar_turno() -> void:
 	print("--- Fin del tiro ---")
@@ -289,6 +299,7 @@ func _asignar_facciones(faccion_jugador_activo: int) -> void:
 	var n1: String = "Lisas" if faccion_j1 == Bola.TipoBola.LISA else "Rayadas"
 	var n2: String = "Lisas" if faccion_j2 == Bola.TipoBola.LISA else "Rayadas"
 	facciones_asignadas.emit(faccion_j1, faccion_j2)
+	_emitir_conteo_bolas()
 	_emitir_notificacion("¡Mesa cerrada! Jugador 1: " + n1 + " | Jugador 2: " + n2)
 
 func _evaluar_mesa_cerrada() -> bool:
