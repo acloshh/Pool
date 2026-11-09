@@ -19,6 +19,8 @@ const UMBRAL_MINIMO_ARRASTRE: float = 5.0
 var esta_apuntando: bool = false
 var multiplicador_potencia: float = 15.0
 var distancia_maxima_arrastre: float = 200.0
+var direccion_apunte_actual: Vector2 = Vector2.ZERO
+var distancia_apunte_actual: float = 0.0
 
 var fue_embolsada: bool = false
 var posicion_reaparicion: Vector2 = Vector2.INF
@@ -82,6 +84,43 @@ func _integrate_forces(estado_fisico: PhysicsDirectBodyState2D) -> void:
 		detener_pendiente = false
 		
 	if tipo_bola == TipoBola.BLANCA and monitoreando_primer_contacto and not primer_contacto_registrado:
+		# Correccion sub-frame de Tiempo de Impacto (TOI) para evitar que la penetracion discreta
+		# a alta velocidad desvie la normal del primer choque respecto a la Ghost Ball predicha.
+		var velocidad_actual: Vector2 = estado_fisico.linear_velocity
+		if velocidad_actual.length_squared() > 25.0:
+			var dir_vel: Vector2 = velocidad_actual.normalized()
+			var pos_actual: Vector2 = estado_fisico.transform.origin
+			var gestor: GestorJuego = _obtener_gestor()
+			var bola_mas_temprana: Bola = null
+			var mayor_retroceso: float = 0.0
+			
+			if gestor and gestor.nodo_bolas:
+				for nodo in gestor.nodo_bolas.get_children():
+					if nodo is Bola:
+						var otra: Bola = nodo as Bola
+						if otra == self or otra.fue_embolsada:
+							continue
+						var hacia_otra: Vector2 = otra.global_position - pos_actual
+						var radio_comb: float = radio_mundo + otra.radio_mundo
+						var dist_cuad: float = hacia_otra.length_squared()
+						if dist_cuad < (radio_comb * radio_comb) - 0.01:
+							var proyeccion: float = hacia_otra.dot(dir_vel)
+							var dist_perp_cuad: float = dist_cuad - (proyeccion * proyeccion)
+							var radio_objetivo: float = radio_comb - 0.04
+							if dist_perp_cuad < radio_objetivo * radio_objetivo:
+								var retroceso: float = sqrt(max(0.0, (radio_objetivo * radio_objetivo) - dist_perp_cuad)) - proyeccion
+								if retroceso > mayor_retroceso:
+									mayor_retroceso = retroceso
+									bola_mas_temprana = otra
+									
+			if bola_mas_temprana != null and mayor_retroceso > 0.0:
+				var pos_contacto_exacto: Vector2 = pos_actual - (dir_vel * mayor_retroceso)
+				estado_fisico.transform = Transform2D(0.0, pos_contacto_exacto)
+				primer_contacto_registrado = true
+				monitoreando_primer_contacto = false
+				primera_bola_contactada.emit(bola_mas_temprana)
+				return
+				
 		var cantidad_contactos: int = estado_fisico.get_contact_count()
 		for i in range(cantidad_contactos):
 			var objeto: Object = estado_fisico.get_contact_collider_object(i)
@@ -125,11 +164,11 @@ func reubicar(nueva_posicion: Vector2) -> void:
 func detener_completamente() -> void:
 	if fue_embolsada:
 		return
+	detener_pendiente = true
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
 	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
-	detener_pendiente = false
 
 func limpiar_estados_pendientes() -> void:
 	detener_pendiente = false
@@ -154,6 +193,8 @@ func cancelar_apunte() -> void:
 	esta_apuntando = false
 	hay_impacto_proyectado = false
 	impacto_es_contra_bola = false
+	direccion_apunte_actual = Vector2.ZERO
+	distancia_apunte_actual = 0.0
 	if linea_apunte:
 		linea_apunte.visible = false
 	queue_redraw()
@@ -197,6 +238,7 @@ func _unhandled_input(evento: InputEvent) -> void:
 					return
 				if linear_velocity.length() < 5.0:
 					esta_apuntando = true
+					_actualizar_linea_predictiva()
 			else:
 				if esta_apuntando:
 					disparar()
@@ -232,6 +274,8 @@ func _actualizar_linea_predictiva() -> void:
 	var distancia: float = clamp(vector_arrastre.length(), 0.0, distancia_maxima_arrastre)
 	
 	if distancia < UMBRAL_MINIMO_ARRASTRE:
+		direccion_apunte_actual = Vector2.ZERO
+		distancia_apunte_actual = 0.0
 		linea_apunte.visible = false
 		hay_impacto_proyectado = false
 		impacto_es_contra_bola = false
@@ -239,6 +283,8 @@ func _actualizar_linea_predictiva() -> void:
 		return
 		
 	var direccion_apunte: Vector2 = vector_arrastre.normalized()
+	direccion_apunte_actual = direccion_apunte
+	distancia_apunte_actual = distancia
 	var alcance_maximo: float = max(distancia * 4.5, 160.0)
 	
 	# 1. Calculo analitico exacto contra todas las bolas activas (interseccion rayo-circulo de radio 2*R)
@@ -264,8 +310,19 @@ func _actualizar_linea_predictiva() -> void:
 						distancia_impacto_bola = dist_contacto
 						bola_impactada = otra
 						
-	# 2. Calculo exacto de impacto contra los limites internos de las bandas de la mesa
+	# 2. Barrido fisico volumetrico (cast_motion) contra las bandas reales (incluyendo biseles)
 	var distancia_impacto_banda: float = _calcular_distancia_a_banda(global_position, direccion_apunte)
+	if forma_barrido and get_world_2d():
+		var espacio: PhysicsDirectSpaceState2D = get_world_2d().direct_space_state
+		var parametros_banda: PhysicsShapeQueryParameters2D = PhysicsShapeQueryParameters2D.new()
+		parametros_banda.shape = forma_barrido
+		parametros_banda.transform = Transform2D(0.0, global_position)
+		parametros_banda.motion = direccion_apunte * alcance_maximo
+		parametros_banda.collision_mask = 1
+		parametros_banda.exclude = [get_rid()]
+		var resultado_barrido: PackedFloat32Array = espacio.cast_motion(parametros_banda)
+		if resultado_barrido.size() >= 2 and resultado_barrido[0] < 1.0:
+			distancia_impacto_banda = min(distancia_impacto_banda, resultado_barrido[0] * alcance_maximo)
 	
 	var distancia_obstaculo: float = min(distancia_impacto_bola, distancia_impacto_banda)
 	var distancia_final: float = min(alcance_maximo, distancia_obstaculo)
@@ -337,11 +394,9 @@ func disparar() -> void:
 	if gestor and not gestor.puede_iniciar_apunte():
 		return
 		
-	var pos_mouse: Vector2 = get_global_mouse_position()
-	var vector_arrastre: Vector2 = global_position - pos_mouse
-	var distancia: float = clamp(vector_arrastre.length(), 0.0, distancia_maxima_arrastre)
-	
-	if distancia < UMBRAL_MINIMO_ARRASTRE:
+	var direccion_apunte: Vector2 = direccion_apunte_actual
+	var distancia: float = distancia_apunte_actual
+	if distancia < UMBRAL_MINIMO_ARRASTRE or direccion_apunte == Vector2.ZERO:
 		return
 		
 	limpiar_estados_pendientes()
@@ -349,10 +404,15 @@ func disparar() -> void:
 	monitoreando_primer_contacto = true
 	sleeping = false
 	
+	# Garantizar reposo absoluto antes de aplicar el impulso central para evitar desvios residuales
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	
 	if gestor:
 		gestor.registrar_tiro()
 		
-	var direccion_apunte: Vector2 = vector_arrastre.normalized()
 	var impulso: Vector2 = direccion_apunte * distancia * multiplicador_potencia
 	apply_central_impulse(impulso)
 	

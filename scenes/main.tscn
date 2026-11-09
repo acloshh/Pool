@@ -21,6 +21,7 @@
 [ext_resource type="Texture2D" uid="uid://bxdsinb52c4ip" path="res://assets/Pool/pool_ball_plain_14.png" id="18_fv21b"]
 [ext_resource type="Texture2D" uid="uid://f013r8b0881s" path="res://assets/Pool/pool_ball_plain_6.png" id="19_tel4y"]
 [ext_resource type="Texture2D" uid="uid://0kca4ynacd1c" path="res://assets/Pool/pool_ball_plain_13.png" id="20_qkpxi"]
+[ext_resource type="Script" uid="uid://b5ukcuik5w1p6" path="res://scripts/hud_juego.gd" id="22_jscy8"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0wfyh"]
 texture = ExtResource("1_o5qli")
@@ -213,3 +214,4 @@ limit_right = 1920
 limit_bottom = 1080
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=225652812]
+script = ExtResource("22_jscy8")

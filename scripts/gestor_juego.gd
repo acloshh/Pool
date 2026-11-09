@@ -146,6 +146,20 @@ func validar_distancia_bolas_y_troneras(posicion_evaluar: Vector2, radio_bola: f
 	if not LIMITES_MESA_INTERNA.has_point(posicion_evaluar):
 		return false
 		
+	if ignorar_bola and ignorar_bola.get_world_2d():
+		var espacio: PhysicsDirectSpaceState2D = ignorar_bola.get_world_2d().direct_space_state
+		var parametros: PhysicsShapeQueryParameters2D = PhysicsShapeQueryParameters2D.new()
+		var circulo_consulta: CircleShape2D = CircleShape2D.new()
+		circulo_consulta.radius = radio_bola + 1.5
+		parametros.shape = circulo_consulta
+		parametros.transform = Transform2D(0.0, posicion_evaluar)
+		parametros.collision_mask = 1 | 2 | 4
+		parametros.collide_with_bodies = true
+		parametros.collide_with_areas = true
+		parametros.exclude = [ignorar_bola.get_rid()]
+		if espacio.intersect_shape(parametros, 1).size() > 0:
+			return false
+			
 	var distancia_minima_bolas: float = (radio_bola * 2.0) + 2.0
 	for nodo in nodo_bolas.get_children():
 		if nodo is Bola:

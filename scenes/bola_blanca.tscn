@@ -4,17 +4,18 @@
 [ext_resource type="Texture2D" uid="uid://c2bu4ojrfgaly" path="res://assets/Pool/cue_ball_plain.png" id="2_js7bc"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_wwa5j"]
-friction = 0.5
+friction = 0.0
 bounce = 0.7
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_yfaq3"]
-radius = 257.31693
+radius = 15.44
 
 [node name="BolaBlanca" type="RigidBody2D" unique_id=1862261123]
 collision_layer = 2
 collision_mask = 3
 physics_material_override = SubResource("PhysicsMaterial_wwa5j")
 gravity_scale = 0.0
+lock_rotation = true
 continuous_cd = 2
 linear_damp = 1.2
 script = ExtResource("1_wwa5j")
@@ -25,7 +26,6 @@ scale = Vector2(0.06, 0.06)
 texture = ExtResource("2_js7bc")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1408515985]
-scale = Vector2(0.06, 0.06)
 shape = SubResource("CircleShape2D_yfaq3")
 
 [node name="LineaApunte" type="Line2D" parent="." unique_id=1398839297]
