@@ -44,6 +44,7 @@ var normal_impacto_bola: Vector2 = Vector2.ZERO
 var centro_bola_objetivo_relativo: Vector2 = Vector2.ZERO
 var hay_impacto_proyectado: bool = false
 var impacto_es_contra_bola: bool = false
+var impacto_bola_es_legal: bool = true
 
 var gestor_ref: GestorJuego = null
 
@@ -193,10 +194,12 @@ func cancelar_apunte() -> void:
 	esta_apuntando = false
 	hay_impacto_proyectado = false
 	impacto_es_contra_bola = false
+	impacto_bola_es_legal = true
 	direccion_apunte_actual = Vector2.ZERO
 	distancia_apunte_actual = 0.0
 	if linea_apunte:
 		linea_apunte.visible = false
+		linea_apunte.default_color = Color(1.0, 1.0, 1.0, 0.5176471)
 	queue_redraw()
 
 func _unhandled_input(evento: InputEvent) -> void:
@@ -330,11 +333,19 @@ func _actualizar_linea_predictiva() -> void:
 	vector_impacto_global = direccion_apunte * distancia_final
 	hay_impacto_proyectado = distancia_obstaculo <= alcance_maximo
 	impacto_es_contra_bola = hay_impacto_proyectado and (distancia_impacto_bola <= distancia_impacto_banda) and (bola_impactada != null)
+	impacto_bola_es_legal = true
 	
 	if impacto_es_contra_bola and bola_impactada:
 		var pos_fantasma_mundo: Vector2 = global_position + vector_impacto_global
 		normal_impacto_bola = (bola_impactada.global_position - pos_fantasma_mundo).normalized()
 		centro_bola_objetivo_relativo = bola_impactada.global_position - global_position
+		if gestor:
+			impacto_bola_es_legal = gestor.es_bola_objetivo_legal(bola_impactada)
+			
+	if impacto_es_contra_bola and not impacto_bola_es_legal:
+		linea_apunte.default_color = Color(1.0, 0.25, 0.25, 0.72)
+	else:
+		linea_apunte.default_color = Color(1.0, 1.0, 1.0, 0.5176471)
 		
 	linea_apunte.global_position = global_position
 	linea_apunte.global_rotation = 0.0
@@ -373,15 +384,28 @@ func _draw() -> void:
 		var color_halo: Color = Color(0.2, 1.0, 0.35, 0.9) if posicion_colocacion_valida else Color(1.0, 0.2, 0.2, 0.9)
 		draw_arc(Vector2.ZERO, radio_mundo + 4.0, 0.0, TAU, 32, color_halo, 2.5)
 	elif esta_apuntando and hay_impacto_proyectado:
-		# Silueta exacta de la bola blanca en el momento del impacto (Ghost Ball)
-		draw_arc(vector_impacto_global, radio_mundo, 0.0, TAU, 32, Color(1.0, 1.0, 1.0, 0.75), 2.0)
-		draw_circle(vector_impacto_global, 2.5, Color(1.0, 1.0, 1.0, 0.85))
-		
-		# Si impacta contra otra bola, mostrar la linea de salida de la bola golpeada
-		if impacto_es_contra_bola:
-			var inicio_guia: Vector2 = centro_bola_objetivo_relativo
-			var fin_guia: Vector2 = inicio_guia + (normal_impacto_bola * 55.0)
-			draw_line(inicio_guia, fin_guia, Color(1.0, 0.9, 0.3, 0.75), 2.0)
+		if impacto_es_contra_bola and not impacto_bola_es_legal:
+			# Simbolo de Prohibido sobre la posicion de impacto cuando apunta a una bola ilegal
+			var color_prohibido: Color = Color(1.0, 0.18, 0.18, 0.95)
+			draw_circle(vector_impacto_global, radio_mundo, Color(0.85, 0.08, 0.08, 0.28))
+			draw_arc(vector_impacto_global, radio_mundo, 0.0, TAU, 32, color_prohibido, 3.2)
+			var desplazamiento_diag: Vector2 = Vector2(0.70710678, 0.70710678) * (radio_mundo - 1.5)
+			draw_line(
+				vector_impacto_global - desplazamiento_diag,
+				vector_impacto_global + desplazamiento_diag,
+				color_prohibido,
+				3.2
+			)
+		else:
+			# Silueta exacta de la bola blanca en el momento del impacto (Ghost Ball)
+			draw_arc(vector_impacto_global, radio_mundo, 0.0, TAU, 32, Color(1.0, 1.0, 1.0, 0.75), 2.0)
+			draw_circle(vector_impacto_global, 2.5, Color(1.0, 1.0, 1.0, 0.85))
+			
+			# Si impacta contra una bola legal, mostrar la linea de salida de la bola golpeada
+			if impacto_es_contra_bola:
+				var inicio_guia: Vector2 = centro_bola_objetivo_relativo
+				var fin_guia: Vector2 = inicio_guia + (normal_impacto_bola * 55.0)
+				draw_line(inicio_guia, fin_guia, Color(1.0, 0.9, 0.3, 0.75), 2.0)
 
 func es_posicion_libre(posicion_evaluar: Vector2) -> bool:
 	var gestor: GestorJuego = _obtener_gestor()

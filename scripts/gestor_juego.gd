@@ -186,6 +186,29 @@ func _al_contactar_primera_bola(bola_objetivo: Bola) -> void:
 		var nombre_tipo: String = _obtener_nombre_tipo_bola(primera_bola_contactada_tipo)
 		print("[Contacto] Primera bola impactada: ", nombre_tipo)
 
+func es_bola_objetivo_legal(bola_objetivo: Bola) -> bool:
+	if not bola_objetivo or bola_objetivo.fue_embolsada:
+		return false
+		
+	var tipo_objetivo: int = bola_objetivo.tipo_bola
+	if tipo_objetivo == Bola.TipoBola.BLANCA:
+		return false
+		
+	# En el tiro de saque inicial, cualquier bola del triangulo es legal
+	if es_tiro_saque:
+		return true
+		
+	# Con mesa abierta (despues del saque), Lisas y Rayadas son legales; la Bola 8 es ilegal
+	if mesa_abierta:
+		return tipo_objetivo == Bola.TipoBola.LISA or tipo_objetivo == Bola.TipoBola.RAYADA
+		
+	# Con mesa cerrada, depende de la faccion del jugador activo (Jugador 1 o Jugador 2)
+	var mi_faccion: int = _obtener_faccion_actual()
+	var mis_restantes: int = _contar_bolas_restantes(mi_faccion)
+	if mis_restantes == 0:
+		return tipo_objetivo == Bola.TipoBola.NEGRA
+	return tipo_objetivo == mi_faccion
+
 func _al_elegir_tronera(tronera: Tronera) -> void:
 	if not debe_cantar_tronera:
 		return
