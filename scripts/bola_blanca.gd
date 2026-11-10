@@ -17,6 +17,7 @@ const UMBRAL_MINIMO_ARRASTRE: float = 5.0
 @onready var linea_apunte: Line2D = get_node_or_null("LineaApunte")
 
 var esta_apuntando: bool = false
+var mostrando_apunte_externo: bool = false
 var multiplicador_potencia: float = 15.0
 var distancia_maxima_arrastre: float = 200.0
 var direccion_apunte_actual: Vector2 = Vector2.ZERO
@@ -192,6 +193,7 @@ func activar_modo_colocacion(limites: Rect2) -> void:
 
 func cancelar_apunte() -> void:
 	esta_apuntando = false
+	mostrando_apunte_externo = false
 	hay_impacto_proyectado = false
 	impacto_es_contra_bola = false
 	impacto_bola_es_legal = true
@@ -202,12 +204,36 @@ func cancelar_apunte() -> void:
 		linea_apunte.default_color = Color(1.0, 1.0, 1.0, 0.5176471)
 	queue_redraw()
 
+func colocar_automaticamente(pos_destino: Vector2) -> void:
+	if tipo_bola != TipoBola.BLANCA:
+		return
+	en_modo_colocacion = false
+	posicion_colocacion_valida = true
+	reubicar(pos_destino)
+	queue_redraw()
+	bola_colocada_en_mesa.emit(pos_destino)
+
+func mostrar_apunte_externo(direccion: Vector2, distancia: float) -> void:
+	if tipo_bola != TipoBola.BLANCA or not linea_apunte:
+		return
+	esta_apuntando = true
+	mostrando_apunte_externo = true
+	_calcular_y_dibujar_linea_predictiva(direccion.normalized(), clamp(distancia, UMBRAL_MINIMO_ARRASTRE, distancia_maxima_arrastre))
+
+func disparar_con_vector(direccion: Vector2, distancia: float) -> void:
+	if tipo_bola != TipoBola.BLANCA:
+		return
+	direccion_apunte_actual = direccion.normalized()
+	distancia_apunte_actual = clamp(distancia, UMBRAL_MINIMO_ARRASTRE, distancia_maxima_arrastre)
+	disparar()
+	cancelar_apunte()
+
 func _unhandled_input(evento: InputEvent) -> void:
 	if tipo_bola != TipoBola.BLANCA:
 		return
 		
 	var gestor: GestorJuego = _obtener_gestor()
-	if not gestor:
+	if not gestor or not gestor.es_turno_humano():
 		return
 		
 	# Modo Bola en Mano: clic izquierdo confirma la posicion si no hay solapamiento
@@ -241,6 +267,7 @@ func _unhandled_input(evento: InputEvent) -> void:
 					return
 				if linear_velocity.length() < 5.0:
 					esta_apuntando = true
+					mostrando_apunte_externo = false
 					_actualizar_linea_predictiva()
 			else:
 				if esta_apuntando:
@@ -251,7 +278,10 @@ func _physics_process(_delta: float) -> void:
 	if tipo_bola != TipoBola.BLANCA:
 		return
 		
+	var gestor: GestorJuego = _obtener_gestor()
 	if en_modo_colocacion:
+		if gestor and not gestor.es_turno_humano():
+			return
 		var pos_acotada: Vector2 = _calcular_posicion_mouse_acotada()
 		global_position = pos_acotada
 		PhysicsServer2D.body_set_state(get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, pos_acotada))
@@ -261,7 +291,7 @@ func _physics_process(_delta: float) -> void:
 		queue_redraw()
 		return
 		
-	if esta_apuntando and linea_apunte:
+	if esta_apuntando and linea_apunte and not mostrando_apunte_externo:
 		_actualizar_linea_predictiva()
 
 func _calcular_posicion_mouse_acotada() -> Vector2:
@@ -285,7 +315,9 @@ func _actualizar_linea_predictiva() -> void:
 		queue_redraw()
 		return
 		
-	var direccion_apunte: Vector2 = vector_arrastre.normalized()
+	_calcular_y_dibujar_linea_predictiva(vector_arrastre.normalized(), distancia)
+
+func _calcular_y_dibujar_linea_predictiva(direccion_apunte: Vector2, distancia: float) -> void:
 	direccion_apunte_actual = direccion_apunte
 	distancia_apunte_actual = distancia
 	var alcance_maximo: float = max(distancia * 4.5, 160.0)

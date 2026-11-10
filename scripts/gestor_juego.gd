@@ -44,11 +44,20 @@ var ticks_acumulados_reposo: int = 0
 var ticks_desde_disparo: int = 0
 
 var bola_blanca_ref: Bola
+var controlador_ia: ControladorIA = null
+var pausa_menu_activa: bool = false
 
 @onready var nodo_troneras: Node2D = %Troneras
 @onready var nodo_bolas: Node2D = %Bolas
 
 func _ready() -> void:
+	controlador_ia = ControladorIA.new()
+	controlador_ia.name = "ControladorIA"
+	add_child(controlador_ia)
+	
+	if SesionJuego.mostrar_menu_al_iniciar:
+		pausa_menu_activa = true
+		
 	for bola in nodo_bolas.get_children():
 		if bola is Bola and bola.tipo_bola == Bola.TipoBola.BLANCA:
 			posicion_saque = bola.global_position
@@ -64,10 +73,10 @@ func _ready() -> void:
 			t.tronera_elegida.connect(_al_elegir_tronera)
 			
 	_preparar_inicio_tiro(false)
-	_emitir_notificacion("--- PARTIDA INICIADA --- Turno del Jugador 1 (Saque Inicial - Mesa Abierta)")
+	_emitir_notificacion("--- PARTIDA INICIADA --- Turno de " + obtener_nombre_jugador(Jugador.UNO) + " (Saque Inicial - Mesa Abierta)")
 
 func _physics_process(delta: float) -> void:
-	if estado == EstadoJuego.FIN_PARTIDA:
+	if estado == EstadoJuego.FIN_PARTIDA or pausa_menu_activa:
 		return
 		
 	if estado == EstadoJuego.ESPERANDO_TIRO or estado == EstadoJuego.COLOCANDO_BOLA_BLANCA:
@@ -209,7 +218,37 @@ func es_bola_objetivo_legal(bola_objetivo: Bola) -> bool:
 		return tipo_objetivo == Bola.TipoBola.NEGRA
 	return tipo_objetivo == mi_faccion
 
+func es_modo_contra_ia() -> bool:
+	return SesionJuego.es_rival_ia()
+
+func obtener_dificultad_ia_activa() -> int:
+	return int(SesionJuego.obtener_dificultad_activa())
+
+func obtener_nombre_jugador(jugador: Jugador) -> String:
+	if jugador == Jugador.UNO:
+		return "JUGADOR 1"
+	return SesionJuego.obtener_nombre_jugador_2()
+
+func es_turno_humano() -> bool:
+	if pausa_menu_activa or estado == EstadoJuego.FIN_PARTIDA:
+		return false
+	if turno_actual == Jugador.DOS and es_modo_contra_ia():
+		return false
+	return true
+
+func establecer_pausa_menu(pausado: bool) -> void:
+	pausa_menu_activa = pausado
+	if pausado and controlador_ia:
+		controlador_ia.cancelar_turno_ia()
+	elif not pausado and estado != EstadoJuego.FIN_PARTIDA and not es_turno_humano() and controlador_ia:
+		controlador_ia.ejecutar_turno_ia(self)
+
 func _al_elegir_tronera(tronera: Tronera) -> void:
+	if not es_turno_humano():
+		return
+	seleccionar_tronera_directa(tronera)
+
+func seleccionar_tronera_directa(tronera: Tronera) -> void:
 	if not debe_cantar_tronera:
 		return
 	if estado != EstadoJuego.ESPERANDO_TIRO and estado != EstadoJuego.COLOCANDO_BOLA_BLANCA:
@@ -221,7 +260,7 @@ func _al_elegir_tronera(tronera: Tronera) -> void:
 			var t: Tronera = nodo_t as Tronera
 			t.establecer_seleccionada(t == tronera)
 			
-	_emitir_notificacion("Tronera cantada en VERDE: " + tronera.name + ". Ya puedes disparar a la Bola 8.")
+	_emitir_notificacion("Tronera cantada en VERDE: " + tronera.name + ". Tiro habilitado por la Bola 8.")
 
 func _habilitar_seleccion_troneras(activo: bool) -> void:
 	for nodo_t in nodo_troneras.get_children():
@@ -381,50 +420,51 @@ func _evaluar_mesa_cerrada() -> bool:
 
 func _evaluar_bola_8(motivo_falta: String) -> void:
 	estado = EstadoJuego.FIN_PARTIDA
-	var num_jugador: String = "1" if turno_actual == Jugador.UNO else "2"
-	var num_oponente: String = "2" if turno_actual == Jugador.UNO else "1"
+	var nombre_activo: String = obtener_nombre_jugador(turno_actual)
 	var ganador_oponente: Jugador = Jugador.DOS if turno_actual == Jugador.UNO else Jugador.UNO
+	var nombre_oponente: String = obtener_nombre_jugador(ganador_oponente)
 	var cayo_blanca: bool = Bola.TipoBola.BLANCA in bolas_caidas_este_turno
 	
 	# Regla 1: Si se emboca la negra en la primera tirada (saque), cuenta como victoria (salvo scratch)
 	if es_tiro_saque:
 		if not cayo_blanca:
-			var msg_victoria_saque: String = "¡VICTORIA EN EL SAQUE! El Jugador " + num_jugador + " emboco la Bola 8 en la primera tirada."
-			_emitir_notificacion(msg_victoria_saque)
-			partida_finalizada.emit(turno_actual, msg_victoria_saque)
+			var msg_victoria_saque: String = "¡VICTORIA EN EL SAQUE! " + nombre_activo + " emboco la Bola 8 en la primera tirada."
+			_declarar_ganador_partida(turno_actual, msg_victoria_saque)
 		else:
-			var msg_derrota_saque: String = "¡DERROTA! El Jugador " + num_jugador + " emboco la Bola 8 y la blanca en el saque. Gana Jugador " + num_oponente + "."
-			_emitir_notificacion(msg_derrota_saque)
-			partida_finalizada.emit(ganador_oponente, msg_derrota_saque)
+			var msg_derrota_saque: String = "¡DERROTA! " + nombre_activo + " emboco la Bola 8 y la blanca en el saque. Gana " + nombre_oponente + "."
+			_declarar_ganador_partida(ganador_oponente, msg_derrota_saque)
 		return
 		
 	if mesa_abierta or bolas_propias_restantes_al_iniciar_tiro > 0:
-		var msg_prematura: String = "¡DERROTA! Jugador " + num_jugador + " emboco la Bola 8 antes de limpiar su faccion. Gana Jugador " + num_oponente + "."
-		_emitir_notificacion(msg_prematura)
-		partida_finalizada.emit(ganador_oponente, msg_prematura)
+		var msg_prematura: String = "¡DERROTA! " + nombre_activo + " emboco la Bola 8 antes de limpiar su faccion. Gana " + nombre_oponente + "."
+		_declarar_ganador_partida(ganador_oponente, msg_prematura)
 		return
 		
 	if motivo_falta != "":
-		var msg_falta_8: String = "¡DERROTA! Jugador " + num_jugador + " emboco la Bola 8 cometiendo falta (" + motivo_falta + "). Gana Jugador " + num_oponente + "."
-		_emitir_notificacion(msg_falta_8)
-		partida_finalizada.emit(ganador_oponente, msg_falta_8)
+		var msg_falta_8: String = "¡DERROTA! " + nombre_activo + " emboco la Bola 8 cometiendo falta (" + motivo_falta + "). Gana " + nombre_oponente + "."
+		_declarar_ganador_partida(ganador_oponente, msg_falta_8)
 		return
 		
 	if tronera_designada == null or tronera_donde_cayo_negra != tronera_designada:
-		var msg_tronera_erronea: String = "¡DERROTA! Jugador " + num_jugador + " emboco la Bola 8 en una tronera distinta a la cantada en verde. Gana Jugador " + num_oponente + "."
-		_emitir_notificacion(msg_tronera_erronea)
-		partida_finalizada.emit(ganador_oponente, msg_tronera_erronea)
+		var msg_tronera_erronea: String = "¡DERROTA! " + nombre_activo + " emboco la Bola 8 en una tronera distinta a la cantada en verde. Gana " + nombre_oponente + "."
+		_declarar_ganador_partida(ganador_oponente, msg_tronera_erronea)
 		return
 		
-	var msg_victoria: String = "¡VICTORIA! El Jugador " + num_jugador + " limpio su faccion y emboco la Bola 8 en la tronera cantada."
-	_emitir_notificacion(msg_victoria)
-	partida_finalizada.emit(turno_actual, msg_victoria)
+	var msg_victoria: String = "¡VICTORIA! " + nombre_activo + " limpio su faccion y emboco la Bola 8 en la tronera cantada."
+	_declarar_ganador_partida(turno_actual, msg_victoria)
+
+func _declarar_ganador_partida(ganador: Jugador, mensaje: String) -> void:
+	if controlador_ia:
+		controlador_ia.cancelar_turno_ia()
+	SesionJuego.registrar_resultado_torneo(ganador == Jugador.UNO)
+	_emitir_notificacion(mensaje)
+	partida_finalizada.emit(ganador, mensaje)
 
 func _cambiar_turno(otorgar_bola_en_mano: bool) -> void:
 	turno_actual = Jugador.DOS if turno_actual == Jugador.UNO else Jugador.UNO
-	var num_jugador: String = "1" if turno_actual == Jugador.UNO else "2"
+	var nombre_j: String = obtener_nombre_jugador(turno_actual)
 	var texto_extra: String = " (Con Bola en Mano)" if otorgar_bola_en_mano else ""
-	_emitir_notificacion("--> Cambio de turno: Juega el Jugador " + num_jugador + texto_extra)
+	_emitir_notificacion("--> Cambio de turno: Juega " + nombre_j + texto_extra)
 	_preparar_inicio_tiro(otorgar_bola_en_mano)
 	turno_cambiado.emit(turno_actual, otorgar_bola_en_mano)
 
@@ -444,7 +484,7 @@ func _preparar_inicio_tiro(con_bola_en_mano: bool) -> void:
 		debe_cantar_tronera = false
 		
 	_habilitar_seleccion_troneras(debe_cantar_tronera)
-	if debe_cantar_tronera:
+	if debe_cantar_tronera and es_turno_humano():
 		_emitir_notificacion("¡Tiro por la Bola 8! Haz clic sobre una tronera para cantarla (se pintara de verde).")
 		
 	if con_bola_en_mano and bola_blanca_ref:
@@ -452,9 +492,13 @@ func _preparar_inicio_tiro(con_bola_en_mano: bool) -> void:
 			bola_blanca_ref.global_position = _buscar_posicion_libre_cercana(posicion_saque)
 		estado = EstadoJuego.COLOCANDO_BOLA_BLANCA
 		bola_blanca_ref.activar_modo_colocacion(LIMITES_MESA_INTERNA)
-		_emitir_notificacion("Bola en Mano activa: Mueve el mouse a una posicion libre (halo verde) y haz clic izquierdo para colocar la blanca.")
+		if es_turno_humano():
+			_emitir_notificacion("Bola en Mano activa: Mueve el mouse a una posicion libre (halo verde) y haz clic izquierdo para colocar la blanca.")
 	else:
 		estado = EstadoJuego.ESPERANDO_TIRO
+		
+	if not pausa_menu_activa and not es_turno_humano() and controlador_ia:
+		controlador_ia.ejecutar_turno_ia(self)
 
 func _buscar_posicion_libre_cercana(origen: Vector2) -> Vector2:
 	var radio_b: float = bola_blanca_ref.radio_mundo if bola_blanca_ref else 15.44
