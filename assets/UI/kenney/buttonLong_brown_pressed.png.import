@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dm72x1vggmeqg"
-path="res://.godot/imported/banner_central.svg-7ecd35c5ff4b5befe1bd678a1d3b669b.ctex"
+uid="uid://cbj2fuilv74r4"
+path="res://.godot/imported/buttonLong_brown_pressed.png-eff35e31a931456b366b4bee5f246977.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/UI/banner_central.svg"
-dest_files=["res://.godot/imported/banner_central.svg-7ecd35c5ff4b5befe1bd678a1d3b669b.ctex"]
+source_file="res://assets/UI/kenney/buttonLong_brown_pressed.png"
+dest_files=["res://.godot/imported/buttonLong_brown_pressed.png-eff35e31a931456b366b4bee5f246977.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c52oisg3nw5uk"
-path="res://.godot/imported/icono_tacos.svg-6dda3ac9953b176384eccbab0874f2b1.ctex"
+uid="uid://byg1fd280jk8r"
+path="res://.godot/imported/buttonLong_brown.png-00b3abe446c2ab63da335b2d67ffb3b3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/UI/icono_tacos.svg"
-dest_files=["res://.godot/imported/icono_tacos.svg-6dda3ac9953b176384eccbab0874f2b1.ctex"]
+source_file="res://assets/UI/kenney/buttonLong_brown.png"
+dest_files=["res://.godot/imported/buttonLong_brown.png-00b3abe446c2ab63da335b2d67ffb3b3.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

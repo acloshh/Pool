@@ -208,10 +208,7 @@ tipo_bola = 2
 textura_bola = ExtResource("13_og1vs")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1541206830]
-limit_left = 0
-limit_top = 0
-limit_right = 1920
-limit_bottom = 1080
+position = Vector2(972, 504)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=225652812]
 script = ExtResource("22_jscy8")
