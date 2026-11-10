@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg1" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#2E7D32"/>
+      <stop offset="70%" stop-color="#143D1B"/>
+      <stop offset="100%" stop-color="#0A210E"/>
+    </radialGradient>
+    <linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE875"/>
+      <stop offset="50%" stop-color="#F5AD42"/>
+      <stop offset="100%" stop-color="#B87314"/>
+    </linearGradient>
+    <linearGradient id="suit1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#0F1F36"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="76" fill="url(#gold1)"/>
+  <circle cx="80" cy="80" r="69" fill="#3E1E0A"/>
+  <circle cx="80" cy="80" r="65" fill="url(#bg1)"/>
+  <circle cx="80" cy="80" r="56" fill="none" stroke="#F5AD42" stroke-width="1.5" stroke-opacity="0.35"/>
+  <!-- Taco de billar cruzado detras -->
+  <line x1="26" y1="126" x2="134" y2="34" stroke="#D99B52" stroke-width="6" stroke-linecap="round"/>
+  <line x1="124" y1="42" x2="134" y2="34" stroke="#29B6F6" stroke-width="6" stroke-linecap="round"/>
+  <!-- Hombros / Chaleco de billar -->
+  <path d="M32 136 C36 104, 124 104, 128 136 Z" fill="url(#suit1)" stroke="#F5AD42" stroke-width="2"/>
+  <polygon points="80,106 68,134 92,134" fill="#F5F7FA"/>
+  <polygon points="73,114 80,118 87,114 87,122 80,118 73,122" fill="#E53935"/>
+  <!-- Cabeza y cabello -->
+  <circle cx="80" cy="68" r="26" fill="#F3C19D"/>
+  <path d="M54 64 C54 38, 106 38, 106 64 C102 50, 88 46, 74 48 C62 50, 56 56, 54 64 Z" fill="#3B2314"/>
+  <!-- Ojos y expresion confiada -->
+  <circle cx="70" cy="68" r="3.2" fill="#1F1610"/>
+  <circle cx="90" cy="68" r="3.2" fill="#1F1610"/>
+  <circle cx="71" cy="67" r="1.1" fill="#FFFFFF"/>
+  <circle cx="91" cy="67" r="1.1" fill="#FFFFFF"/>
+  <path d="M64 61 Q70 58 75 61" fill="none" stroke="#3B2314" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M85 61 Q90 58 96 61" fill="none" stroke="#3B2314" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M72 79 Q80 85 88 79" fill="none" stroke="#8D4E31" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- Insignia inferior P1 -->
+  <rect x="52" y="130" width="56" height="22" rx="11" fill="url(#gold1)" stroke="#3E1E0A" stroke-width="2"/>
+  <text x="80" y="146" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2A1405" text-anchor="middle">J1</text>
+</svg>

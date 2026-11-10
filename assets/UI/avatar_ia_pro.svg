@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bgia3" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#D32F2F"/>
+      <stop offset="70%" stop-color="#7F0000"/>
+      <stop offset="100%" stop-color="#2B0000"/>
+    </radialGradient>
+    <linearGradient id="gold5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE875"/>
+      <stop offset="50%" stop-color="#F5AD42"/>
+      <stop offset="100%" stop-color="#B87314"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="76" fill="url(#gold5)"/>
+  <circle cx="80" cy="80" r="69" fill="#3E1E0A"/>
+  <circle cx="80" cy="80" r="65" fill="url(#bgia3)"/>
+  <!-- Corona dorada de Gran Maestro -->
+  <polygon points="54,44 62,24 80,36 98,24 106,44" fill="url(#gold5)" stroke="#3E1E0A" stroke-width="2"/>
+  <path d="M32 136 C36 102, 124 102, 128 136 Z" fill="#1A1A1A" stroke="#F5AD42" stroke-width="2.5"/>
+  <!-- Rostro cibernetico negro y oro (inspirado en Bola 8) -->
+  <circle cx="80" cy="68" r="26" fill="#212121" stroke="#F5AD42" stroke-width="2.5"/>
+  <polygon points="60,60 76,65 60,70" fill="#FF5252"/>
+  <polygon points="100,60 84,65 100,70" fill="#FF5252"/>
+  <!-- Mini Bola 8 en el pecho -->
+  <circle cx="80" cy="116" r="11" fill="#111111" stroke="#F5AD42" stroke-width="1.5"/>
+  <circle cx="80" cy="116" r="5.5" fill="#FFFFFF"/>
+  <text x="80" y="119.5" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#111111" text-anchor="middle">8</text>
+  <rect x="44" y="130" width="72" height="22" rx="11" fill="url(#gold5)" stroke="#3E1E0A" stroke-width="2"/>
+  <text x="80" y="146" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#2A1405" text-anchor="middle">PRO</text>
+</svg>

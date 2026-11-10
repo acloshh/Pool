@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="goldEmb" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE875"/>
+      <stop offset="50%" stop-color="#F5AD42"/>
+      <stop offset="100%" stop-color="#9E5E0B"/>
+    </linearGradient>
+    <radialGradient id="feltEmb" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#68B836"/>
+      <stop offset="100%" stop-color="#2E6B18"/>
+    </radialGradient>
+  </defs>
+  <!-- Triangulo de billar de fondo -->
+  <polygon points="64,14 114,102 14,102" fill="url(#feltEmb)" stroke="url(#goldEmb)" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Dos tacos cruzados -->
+  <line x1="16" y1="112" x2="112" y2="16" stroke="#D98A46" stroke-width="7" stroke-linecap="round"/>
+  <line x1="104" y1="24" x2="112" y2="16" stroke="#29B6F6" stroke-width="7" stroke-linecap="round"/>
+  <line x1="112" y1="112" x2="16" y2="16" stroke="#D98A46" stroke-width="7" stroke-linecap="round"/>
+  <line x1="24" y1="24" x2="16" y2="16" stroke="#29B6F6" stroke-width="7" stroke-linecap="round"/>
+  <!-- Bola 8 central -->
+  <circle cx="64" cy="70" r="22" fill="#1E1E1E" stroke="#F5AD42" stroke-width="2.5"/>
+  <circle cx="57" cy="63" r="5" fill="#FFFFFF" fill-opacity="0.28"/>
+  <circle cx="64" cy="70" r="10.5" fill="#FFFFFF"/>
+  <text x="64" y="75" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#111111" text-anchor="middle">8</text>
+</svg>

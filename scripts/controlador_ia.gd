@@ -77,23 +77,12 @@ func elegir_posicion_bola_en_mano(gestor: GestorJuego, dificultad: int) -> Vecto
 	var bola_blanca: Bola = gestor.bola_blanca_ref
 	var radio_b: float = bola_blanca.radio_mundo if bola_blanca else 15.44
 	
-	# En dificultad Facil, coloca la blanca cerca de la posicion de saque con leve variacion
-	if dificultad == 0:
-		for intento in range(20):
-			var offset: Vector2 = Vector2(
-				generador_azar.randf_range(-90.0, 90.0),
-				generador_azar.randf_range(-120.0, 120.0)
-			)
-			var candidata: Vector2 = _acotar_a_mesa(gestor.posicion_saque + offset, gestor.LIMITES_MESA_INTERNA, 22.0)
-			if gestor.validar_distancia_bolas_y_troneras(candidata, radio_b, bola_blanca):
-				return candidata
-		return gestor._buscar_posicion_libre_cercana(gestor.posicion_saque)
-		
-	# En dificultades Medio y Profesional, busca alinearse detras de la mejor bola legal hacia una tronera
+	# En las 3 dificultades busca alinearse detras de una bola legal hacia una tronera
 	var bolas_legales: Array[Bola] = _obtener_bolas_legales(gestor)
 	var troneras: Array[Tronera] = _obtener_troneras(gestor)
 	var mejor_pos: Vector2 = Vector2.INF
 	var mejor_puntaje: float = -INF
+	var distancias_candidatas: Array[float] = [145.0, 185.0] if dificultad == 0 else [88.0, 125.0, 175.0]
 	
 	for bola_obj in bolas_legales:
 		for tronera in troneras:
@@ -104,8 +93,10 @@ func elegir_posicion_bola_en_mano(gestor: GestorJuego, dificultad: int) -> Vecto
 				continue
 				
 			var pos_fantasma: Vector2 = bola_obj.global_position - (dir_a_tronera * (radio_b * 2.0))
-			for dist_detras in [95.0, 140.0, 190.0]:
+			for dist_detras in distancias_candidatas:
 				var candidata: Vector2 = pos_fantasma - (dir_a_tronera * dist_detras)
+				if dificultad == 0:
+					candidata += Vector2(generador_azar.randf_range(-8.0, 8.0), generador_azar.randf_range(-8.0, 8.0))
 				if not gestor.LIMITES_MESA_INTERNA.grow(-18.0).has_point(candidata):
 					continue
 				if not gestor.validar_distancia_bolas_y_troneras(candidata, radio_b, bola_blanca):
@@ -200,8 +191,8 @@ func planificar_tiro(gestor: GestorJuego, dificultad: int) -> Dictionary:
 					var dist_al_centro: float = pos_residual_estimada.distance_to(CENTRO_MESA)
 					puntaje += clamp(35.0 - (dist_al_centro * 0.05), 0.0, 35.0)
 			elif dificultad == 0:
-				# En modo Facil, agrega ruido a la valoracion para no elegir siempre la opcion optima
-				puntaje += generador_azar.randf_range(-25.0, 25.0)
+				# En modo Facil, agrega una variacion leve a la valoracion manteniendo coherencia
+				puntaje += generador_azar.randf_range(-8.0, 8.0)
 				
 			if puntaje > mejor_puntaje:
 				mejor_puntaje = puntaje
@@ -211,37 +202,44 @@ func planificar_tiro(gestor: GestorJuego, dificultad: int) -> Dictionary:
 					"tronera_objetivo": tronera
 				}
 				
-	# Si en modo Profesional no hay tiro directo, evaluar tiro por banda (Bank Shot)
-	if mejor_candidato.is_empty() and dificultad == 2:
+	# Si no hay tiro directo, en Medio y Profesional evaluar tiro por banda (Bank Shot)
+	if mejor_candidato.is_empty() and dificultad >= 1:
 		mejor_candidato = _buscar_tiro_con_banda_profesional(gestor, bolas_legales, troneras)
 		
 	# Si aun no hay tiro de embocada claro, ejecutar tiro de resguardo (Safety) hacia una bola legal visible
 	if mejor_candidato.is_empty():
 		mejor_candidato = _buscar_tiro_resguardo_legal(gestor, bolas_legales, troneras)
 		
-	# Aplicar margen de ruido segun la dificultad (GDD Seccion 3.2)
-	var dir_final: Vector2 = mejor_candidato.get("direccion", Vector2.LEFT)
+	# Aplicar margen de ruido calibrado segun la dificultad (GDD Seccion 3.2)
+	var dir_base: Vector2 = mejor_candidato.get("direccion", Vector2.LEFT)
 	var arrastre_final: float = mejor_candidato.get("distancia_arrastre", 95.0)
 	var tronera_final: Tronera = mejor_candidato.get("tronera_objetivo", null)
 	
 	var error_grados_max: float = 0.0
 	var variacion_fuerza: float = 0.0
 	match dificultad:
-		0: # Facil: alto margen de ruido
-			error_grados_max = 6.2
-			variacion_fuerza = 0.22
-		1: # Medio: ruido moderado
-			error_grados_max = 2.1
-			variacion_fuerza = 0.10
-		2: # Profesional: precision milimetrica
-			error_grados_max = 0.18
-			variacion_fuerza = 0.02
+		0: # Facil: competitivo en tiros cortos/francos, falla algunos tiros largos o finos
+			error_grados_max = 1.65
+			variacion_fuerza = 0.08
+		1: # Medio: buena punteria en toda la mesa
+			error_grados_max = 0.72
+			variacion_fuerza = 0.04
+		2: # Profesional: precision quirurgica
+			error_grados_max = 0.10
+			variacion_fuerza = 0.015
 			
 	var desvio_rad: float = deg_to_rad(generador_azar.randf_range(-error_grados_max, error_grados_max))
-	dir_final = dir_final.rotated(desvio_rad).normalized()
+	var dir_final: Vector2 = dir_base.rotated(desvio_rad).normalized()
+	
+	# Seguro anti-abanico: si el ruido hiciera que la blanca pase de largo sin tocar una bola legal, reducir el ruido
+	if not _rayo_impacta_bola_legal(pos_blanca, dir_final, radio_b, gestor):
+		dir_final = dir_base.rotated(desvio_rad * 0.25).normalized()
+		if not _rayo_impacta_bola_legal(pos_blanca, dir_final, radio_b, gestor):
+			dir_final = dir_base
+			
 	arrastre_final = clamp(
 		arrastre_final * (1.0 + generador_azar.randf_range(-variacion_fuerza, variacion_fuerza)),
-		35.0,
+		45.0,
 		bola_blanca.distancia_maxima_arrastre
 	)
 	
@@ -250,6 +248,27 @@ func planificar_tiro(gestor: GestorJuego, dificultad: int) -> Dictionary:
 		"distancia_arrastre": arrastre_final,
 		"tronera_objetivo": tronera_final
 	}
+
+func _rayo_impacta_bola_legal(origen: Vector2, direccion: Vector2, radio_b: float, gestor: GestorJuego) -> bool:
+	var menor_dist: float = INF
+	var primera_bola: Bola = null
+	for nodo in gestor.nodo_bolas.get_children():
+		if nodo is Bola:
+			var otra: Bola = nodo as Bola
+			if otra == gestor.bola_blanca_ref or otra.fue_embolsada:
+				continue
+			var hacia: Vector2 = otra.global_position - origen
+			var proy: float = hacia.dot(direccion)
+			if proy <= 0.0:
+				continue
+			var dist_perp_cuad: float = hacia.length_squared() - (proy * proy)
+			var r_comb: float = (radio_b + otra.radio_mundo) * 0.96
+			if dist_perp_cuad <= r_comb * r_comb:
+				var d_contacto: float = proy - sqrt(max(0.0, (r_comb * r_comb) - dist_perp_cuad))
+				if d_contacto >= 0.0 and d_contacto < menor_dist:
+					menor_dist = d_contacto
+					primera_bola = otra
+	return primera_bola != null and gestor.es_bola_objetivo_legal(primera_bola)
 
 func _buscar_tiro_con_banda_profesional(gestor: GestorJuego, bolas_legales: Array[Bola], troneras: Array[Tronera]) -> Dictionary:
 	var bola_blanca: Bola = gestor.bola_blanca_ref
@@ -411,3 +430,4 @@ func _obtener_dificultad(gestor: GestorJuego) -> int:
 	if gestor:
 		return gestor.obtener_dificultad_ia_activa()
 	return 1
+
