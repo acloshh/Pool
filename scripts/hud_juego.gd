@@ -597,12 +597,12 @@ func _construir_modal_menu(contenedor_raiz: Control) -> void:
 	_actualizar_vista_bracket_torneo()
 
 func _crear_icono_fijo(tex: Texture2D, tamano: Vector2) -> TextureRect:
-	var tr: TextureRect = TextureRect.new()
-	tr.texture = tex
-	tr.custom_minimum_size = tamano
-	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	return tr
+	var icono_rect: TextureRect = TextureRect.new()
+	icono_rect.texture = tex
+	icono_rect.custom_minimum_size = tamano
+	icono_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icono_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	return icono_rect
 
 func _actualizar_vista_bracket_torneo() -> void:
 	if not contenedor_bracket_torneo:

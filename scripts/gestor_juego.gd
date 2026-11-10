@@ -112,8 +112,8 @@ func _procesar_falta_por_tiempo() -> void:
 		bola_blanca_ref.cancelar_apunte()
 		if estado == EstadoJuego.COLOCANDO_BOLA_BLANCA:
 			var pos_segura: Vector2 = _buscar_posicion_libre_cercana(posicion_saque)
-			bola_blanca_ref.en_modo_colocacion = false
-			bola_blanca_ref.reubicar(pos_segura)
+			bola_blanca_ref.global_position = pos_segura
+			PhysicsServer2D.body_set_state(bola_blanca_ref.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, pos_segura))
 			
 	_emitir_notificacion("¡FALTA POR TIEMPO AGOTADO! El reloj de 30s llego a cero.")
 	_cambiar_turno(true)

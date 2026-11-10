@@ -82,7 +82,9 @@ func elegir_posicion_bola_en_mano(gestor: GestorJuego, dificultad: int) -> Vecto
 	var troneras: Array[Tronera] = _obtener_troneras(gestor)
 	var mejor_pos: Vector2 = Vector2.INF
 	var mejor_puntaje: float = -INF
-	var distancias_candidatas: Array[float] = [145.0, 185.0] if dificultad == 0 else [88.0, 125.0, 175.0]
+	var distancias_candidatas: Array[float] = [88.0, 125.0, 175.0]
+	if dificultad == 0:
+		distancias_candidatas = [145.0, 185.0]
 	
 	for bola_obj in bolas_legales:
 		for tronera in troneras:
@@ -430,4 +432,3 @@ func _obtener_dificultad(gestor: GestorJuego) -> int:
 	if gestor:
 		return gestor.obtener_dificultad_ia_activa()
 	return 1
-
